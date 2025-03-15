@@ -19,21 +19,26 @@
 import xml.etree.ElementTree as ET
 import json
 
+
+def get_tag(elem, k):
+    tags = elem.findall("tag")
+    tag = next((t for t in tags if t.attrib.get("k") == k), None)
+    return tag.attrib.get("v") if tag is not None else None
+
+
 def make_place(elem):
-  place = dict()
-  place['@context'] = 'https://www.w3.org/ns/activitystreams'
-  place['type'] = 'Place'
-  tags = elem.findall('tag')
-  place['id'] = 'https://places.pub/osm/n' + elem.attrib.get('id')
-  if elem.attrib.get('lat') is not None:
-    place['latitude'] = float(elem.attrib.get('lat'))
-  if elem.attrib.get('lon') is not None:
-    place['longitude'] = float(elem.attrib.get('lon'))
-  place['updated'] = elem.attrib.get('timestamp')
-  nametag = next((t for t in tags if t.attrib.get('k') == 'name'), None)
-  if nametag is not None:
-    place['name'] = nametag.attrib.get('v')
-  return place
+    place = dict()
+    place["@context"] = "https://www.w3.org/ns/activitystreams"
+    place["type"] = "Place"
+    tags = elem.findall("tag")
+    place["id"] = "https://places.pub/osm/n" + elem.attrib.get("id")
+    if elem.attrib.get("lat") is not None:
+        place["latitude"] = float(elem.attrib.get("lat"))
+    if elem.attrib.get("lon") is not None:
+        place["longitude"] = float(elem.attrib.get("lon"))
+    place["updated"] = elem.attrib.get("timestamp")
+    place["name"] = get_tag(elem, "name")
+    return place
 
 def write_place(place, outputdir):
   place_id = place['id'].split('/')[-1]
@@ -42,16 +47,16 @@ def write_place(place, outputdir):
 
 
 def make_places(filename, outputdir):
-  # Parse the XML file
-  tree = ET.parse(filename)
-  root = tree.getroot()
+    # Parse the XML file
+    tree = ET.parse(filename)
+    root = tree.getroot()
 
-  for elem in root.iter():
-    match (elem.tag):
-      case 'node':
-        if elem.find('tag') is not None:
-          place = make_place(elem)
-          write_place(place, outputdir)
+    for elem in root.iter():
+        match (elem.tag):
+            case "node":
+                if get_tag(elem, "name") is not None:
+                    place = make_place(elem)
+                    write_place(place, outputdir)
 
 
 if __name__ == "__main__":
