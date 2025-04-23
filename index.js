@@ -59,7 +59,6 @@ exports.getPlace = async (req, res) => {
   const context = [
     'https://www.w3.org/ns/activitystreams',
     {
-      vcard: 'http://www.w3.org/2006/vcard/ns#',
       dcterms: 'http://purl.org/dc/terms/'
     }
   ];
