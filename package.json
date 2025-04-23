@@ -1,0 +1,9 @@
+{
+  "name": "places-pub",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.0.0",
+    "@google-cloud/bigquery": "^7.7.0"
+  }
+}
