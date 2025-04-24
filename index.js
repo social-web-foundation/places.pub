@@ -63,9 +63,9 @@ async function getWay(req, res, match) {
       id,
       all_tags,
       osm_timestamp,
-      geometry,
       ST_Y(ST_CENTROID(geometry)) AS lat,
-      ST_X(ST_CENTROID(geometry)) AS lon
+      ST_X(ST_CENTROID(geometry)) AS lon,
+      ST_AsGeoJSON(geometry) AS geojson
     FROM \`bigquery-public-data.geo_openstreetmap.planet_ways\`
     WHERE id = @id
     LIMIT 1
@@ -86,7 +86,7 @@ async function getWay(req, res, match) {
 
   const row = rows[0];
   const tags = tagArrayToObject(row.all_tags);
-  const geometry = JSON.parse(row.geometry.toJSON());
+  const geometry = JSON.parse(row.geojson);
 
   const context = [
     'https://www.w3.org/ns/activitystreams',
@@ -98,7 +98,7 @@ async function getWay(req, res, match) {
 
   const place = {
     '@context': context,
-    type: 'Place',
+    type: ["Place", "geojson:Feature"],
     id: `https://places.pub/way/${wayId}`,
     name: tags.name,
     summary: tags.description,
