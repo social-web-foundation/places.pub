@@ -163,14 +163,14 @@ async function search(req, res) {
   if (!q) return res.status(400).send('Bad Request');
   if (q.length < 3) return res.status(400).send('Bad Request');
 
-  const items = [];
+  let items = [];
 
   for (const type of ['node', 'way', 'relation']) {
-    items.push(await exactMatchSearch(q, type, MAX_SEARCH_RESULTS - items.length));
+    items = items.concat(await exactMatchSearch(q, type, MAX_SEARCH_RESULTS - items.length));
   }
 
   for (const type of ['node', 'way', 'relation']) {
-    items.push(await partialMatchSearch(q, type, MAX_SEARCH_RESULTS - items.length));
+    items = items.concat(await partialMatchSearch(q, type, MAX_SEARCH_RESULTS - items.length));
   }
 
   const context = 'https://www.w3.org/ns/activitystreams';
