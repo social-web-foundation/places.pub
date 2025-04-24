@@ -86,7 +86,51 @@ async function getRoot(req, res) {
 }
 
 async function search(req, res) {
-  res.status(501).send('Not Implemented');
+  const { q } = req.query;
+  if (!q) return res.status(400).send('Bad Request');
+
+  const query = `
+    SELECT
+    id,
+    all_tags,
+    FROM \`bigquery-public-data.geo_openstreetmap.planet_nodes\`
+    WHERE EXISTS (
+      SELECT 1 FROM UNNEST(all_tags) t
+      WHERE t.key = 'name' AND LOWER(t.value) LIKE @query
+    )
+    LIMIT 100
+  `;
+
+  let rows;
+  try {
+    [rows] = await bq.query({
+      query,
+      params: { query: `%${q}%` }
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('Internal Server Error');
+  }
+
+  if (!rows.length) return res.status(404).send('Not Found');
+
+  const context = 'https://www.w3.org/ns/activitystreams';
+
+  const results = {
+    '@context': context,
+    type: 'Collection',
+    id: `https://places.pub/search?q=${encodeURIComponent(q)}`,
+    name: `places.pub search results for "${q}"`,
+    totalItems: rows.length,
+    items: rows.map(row => ({
+      type: 'Place',
+      id: `https://places.pub/node/${row.id}`,
+      name: row.all_tags.find(tag => tag.key === 'name')?.value
+    }))
+  };
+
+  res.setHeader('Content-Type', 'application/activity+json');
+  res.status(200).json(results);
 }
 
 async function getWay(req, res, match) {
@@ -156,7 +200,6 @@ async function getWay(req, res, match) {
   res.setHeader('Content-Type', 'application/activity+json');
   res.status(200).json(place);
 }
-
 
 async function getRelation(req, res, match) {
   const [relationId] = match;
