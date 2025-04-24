@@ -55,6 +55,10 @@ async function getRoot(req, res) {
   res.status(501).send('Not Implemented');
 }
 
+async function search(req, res) {
+  res.status(501).send('Not Implemented');
+}
+
 async function getWay(req, res, match) {
   const [wayId] = match;
 
@@ -124,11 +128,70 @@ async function getWay(req, res, match) {
 
 
 async function getRelation(req, res, match) {
-  res.status(501).send('Not Implemented');
-}
+  const [relationId] = match;
 
-async function search(req, res) {
-  res.status(501).send('Not Implemented');
+  const query = `
+    SELECT
+      id,
+      all_tags,
+      osm_timestamp,
+      ST_Y(ST_CENTROID(geometry)) AS lat,
+      ST_X(ST_CENTROID(geometry)) AS lon,
+      ST_AsGeoJSON(geometry) AS geojson
+    FROM \`bigquery-public-data.geo_openstreetmap.planet_relations\`
+    WHERE id = @id
+    LIMIT 1
+  `;
+
+  let rows;
+  try {
+    [rows] = await bq.query({
+      query,
+      params: { id: Number(relationId) }
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('Internal Server Error');
+  }
+
+  if (!rows.length) return res.status(404).send('Not Found');
+
+  const row = rows[0];
+  const tags = tagArrayToObject(row.all_tags);
+  const geometry = JSON.parse(row.geojson);
+
+  const context = [
+    'https://www.w3.org/ns/activitystreams',
+    {
+      dcterms: 'http://purl.org/dc/terms/',
+      geojson: 'https://purl.org/geojson/vocab#'
+    }
+  ];
+
+  const place = {
+    '@context': context,
+    type: ["Place", "geojson:Feature"],
+    id: `https://places.pub/relation/${relationId}`,
+    name: tags.name,
+    summary: tags.description,
+    latitude: parseFloat(row.lat),
+    longitude: parseFloat(row.lon),
+    'dcterms:license': {
+      type: 'Link',
+      href: 'https://opendatacommons.org/licenses/odbl/1-0/',
+      name: 'Open Database License (ODbL) v1.0'
+    },
+    'dcterms:source': {
+      type: 'Link',
+      href: `https://www.openstreetmap.org/relation/${relationId}`,
+      name: `OpenStreetMap relation ${relationId}`
+    },
+    'geojson:hasGeometry': geometry,
+    ...osmTagsToVCardAddress(tags)
+  };
+
+  res.setHeader('Content-Type', 'application/activity+json');
+  res.status(200).json(place);
 }
 
 async function getNode(req, res, match) {
