@@ -56,8 +56,72 @@ async function getRoot(req, res) {
 }
 
 async function getWay(req, res, match) {
-  res.status(501).send('Not Implemented');
+  const [wayId] = match;
+
+  const query = `
+    SELECT
+      id,
+      tags,
+      geometry,
+      ST_Y(ST_CENTROID(geometry)) AS lat,
+      ST_X(ST_CENTROID(geometry)) AS lon
+    FROM \`bigquery-public-data.geo_openstreetmap.planet_ways\`
+    WHERE id = @id
+    LIMIT 1
+  `;
+
+  let rows;
+  try {
+    [rows] = await bq.query({
+      query,
+      params: { id: Number(wayId) }
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('Internal Server Error');
+  }
+
+  if (!rows.length) return res.status(404).send('Not Found');
+
+  const row = rows[0];
+  const tags = row.tags || {};
+  const geometry = JSON.parse(row.geometry.toJSON());
+
+  const context = [
+    'https://www.w3.org/ns/activitystreams',
+    {
+      dcterms: 'http://purl.org/dc/terms/',
+      geojson: 'https://purl.org/geojson/vocab#'
+    }
+  ];
+
+  const place = {
+    '@context': context,
+    type: 'Place',
+    id: `https://places.pub/way/${wayId}`,
+    name: tags.name,
+    summary: tags.description,
+    latitude: parseFloat(row.lat),
+    longitude: parseFloat(row.lon),
+    'dcterms:license': {
+      type: 'Link',
+      href: 'https://opendatacommons.org/licenses/odbl/1-0/',
+      name: 'Open Database License (ODbL) v1.0'
+    },
+    'dcterms:source': {
+      type: 'Link',
+      href: `https://www.openstreetmap.org/way/${wayId}`,
+      name: `OpenStreetMap way ${wayId}`
+    },
+    'geojson:hasGeometry': geometry,
+    ...osmTagsToVCardAddress(tags)
+  };
+
+  res.setHeader('Content-Type', 'application/ld+json');
+  res.setHeader('Last-Modified', new Date().toUTCString()); // optional
+  res.status(200).json(place);
 }
+
 
 async function getRelation(req, res, match) {
   res.status(501).send('Not Implemented');
