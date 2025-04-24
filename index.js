@@ -61,7 +61,8 @@ async function getWay(req, res, match) {
   const query = `
     SELECT
       id,
-      tags,
+      all_tags,
+      osm_timestamp,
       geometry,
       ST_Y(ST_CENTROID(geometry)) AS lat,
       ST_X(ST_CENTROID(geometry)) AS lon
@@ -84,7 +85,7 @@ async function getWay(req, res, match) {
   if (!rows.length) return res.status(404).send('Not Found');
 
   const row = rows[0];
-  const tags = row.tags || {};
+  const tags = tagArrayToObject(row.all_tags);
   const geometry = JSON.parse(row.geometry.toJSON());
 
   const context = [
@@ -117,8 +118,7 @@ async function getWay(req, res, match) {
     ...osmTagsToVCardAddress(tags)
   };
 
-  res.setHeader('Content-Type', 'application/ld+json');
-  res.setHeader('Last-Modified', new Date().toUTCString()); // optional
+  res.setHeader('Content-Type', 'application/activity+json');
   res.status(200).json(place);
 }
 
