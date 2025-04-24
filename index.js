@@ -34,21 +34,10 @@ function osmTagsToVCardAddress(tags) {
   return Object.keys(address).length > 1 ? { 'vcard:hasAddress': address } : undefined;
 }
 
-exports.route = async (req, res) => {
-  const path = req.path;
-  let match = null;
-
-  match = path.match(/^\/node\/(\d+)\/?$/);
-
-  if (match) {
-    return getPlace(req, res, match.slice(1));
-  } else {
-    return res.status(404).send('Not Found');
-  }
-}
-
-async function getPlace(req, res, match) {
-  const [nodeId] = match;
+exports.getPlace = async (req, res) => {
+  const match = req.path.match(/^\/node\/(\d+)$/);
+  if (!match) return res.status(404).send('Not Found');
+  const nodeId = match[1];
 
   const query = `
     SELECT id, latitude, longitude, osm_timestamp, all_tags
