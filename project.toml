@@ -3,9 +3,6 @@ name = "places-pub"
 runtime = "nodejs"
 entrypoint = "route"
 
-[build]
-builder = "gcr.io/buildpacks/builder:v1"
-
 [env]
 GOOGLE_FUNCTION_TARGET = "route"
 GOOGLE_FUNCTION_SIGNATURE_TYPE = "http"
