@@ -88,6 +88,11 @@ async function getRoot(req, res) {
 }
 
 async function exactMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
+
+  if (limit <= 0) {
+    return [];
+  }
+
   const queryString = `
     SELECT
       id,
@@ -119,6 +124,11 @@ async function exactMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
 }
 
 async function partialMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
+
+  if (limit <= 0) {
+    return [];
+  }
+
   const queryString = `
     SELECT
       id,
