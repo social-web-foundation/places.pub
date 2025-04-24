@@ -18,6 +18,8 @@
 const { BigQuery } = require('@google-cloud/bigquery');
 const bq = new BigQuery();
 
+const MAX_SEARCH_RESULTS = 100;
+
 function tagArrayToObject(all_tags) {
   const tags = {};
   for (const { key, value } of all_tags) {
@@ -85,34 +87,81 @@ async function getRoot(req, res) {
   res.status(501).send('Not Implemented');
 }
 
-async function search(req, res) {
-  const { q } = req.query;
-  if (!q) return res.status(400).send('Bad Request');
-
-  const query = `
+async function exactMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
+  const queryString = `
     SELECT
-    id,
-    all_tags,
-    FROM \`bigquery-public-data.geo_openstreetmap.planet_nodes\`
+      id,
+      all_tags
+    FROM \`bigquery-public-data.geo_openstreetmap.planet_${type}s\`
+    WHERE EXISTS (
+      SELECT 1 FROM UNNEST(all_tags) t
+      WHERE t.key = 'name' AND LOWER(t.value) = @query
+    )
+    LIMIT @limit
+  `;
+
+  const [rows] = await bq.query({
+    query: queryString,
+    params: {
+      query: query.toLowerCase(),
+      limit
+    }
+  });
+
+  return rows.map(row => {
+    const tags = tagArrayToObject(row.all_tags);
+    return {
+      type: 'Place',
+      id: `https://places.pub/${type}/${row.id}`,
+      name: tags.name
+    };
+  });
+}
+
+async function partialMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
+  const queryString = `
+    SELECT
+      id,
+      all_tags
+    FROM \`bigquery-public-data.geo_openstreetmap.planet_${type}s\`
     WHERE EXISTS (
       SELECT 1 FROM UNNEST(all_tags) t
       WHERE t.key = 'name' AND LOWER(t.value) LIKE @query
     )
-    LIMIT 100
   `;
 
-  let rows;
-  try {
-    [rows] = await bq.query({
-      query,
-      params: { query: `%${q}%` }
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).send('Internal Server Error');
+  const [rows] = await bq.query({
+    query: queryString,
+    params: {
+      query: `%${query.toLowerCase()}%`,
+      limit
+    }
+  });
+
+  return rows.map(row => {
+    const tags = tagArrayToObject(row.all_tags);
+    return {
+      type: 'Place',
+      id: `https://places.pub/${type}/${row.id}`,
+      name: tags.name
+    };
+  });
+}
+
+async function search(req, res) {
+  const { q } = req.query;
+  if (!q) return res.status(400).send('Bad Request');
+  if (q.length < 3) return res.status(400).send('Bad Request');
+
+  const items = [];
+
+  for (const type of ['node', 'way', 'relation']) {
+    items.push(await exactMatchSearch(q, type, MAX_SEARCH_RESULTS - items.length));
   }
 
-  if (!rows.length) return res.status(404).send('Not Found');
+  for (const type of ['node', 'way', 'relation']) {
+    items.push(await partialMatchSearch(q, type, MAX_SEARCH_RESULTS - items.length));
+  }
 
   const context = 'https://www.w3.org/ns/activitystreams';
 
@@ -122,11 +171,7 @@ async function search(req, res) {
     id: `https://places.pub/search?q=${encodeURIComponent(q)}`,
     name: `places.pub search results for "${q}"`,
     totalItems: rows.length,
-    items: rows.map(row => ({
-      type: 'Place',
-      id: `https://places.pub/node/${row.id}`,
-      name: row.all_tags.find(tag => tag.key === 'name')?.value
-    }))
+    items: items
   };
 
   res.setHeader('Content-Type', 'application/activity+json');
