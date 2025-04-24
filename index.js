@@ -35,9 +35,40 @@ function osmTagsToVCardAddress(tags) {
 }
 
 exports.getPlace = async (req, res) => {
-  const match = req.path.match(/^\/node\/(\d+)$/);
-  if (!match) return res.status(404).send('Not Found');
-  const nodeId = match[1];
+  let match = null;
+  if (match = req.path.match(/^\/node\/(\d+)$/)) {
+    return getNode(req, res, match.slice(1));
+  } else if (match = req.path.match(/^\/way\/(\d+)$/)) {
+    return getWay(req, res, match.slice(1));
+  } else if (match = req.path.match(/^\/relation\/(\d+)$/)) {
+    return getRelation(req, res, match.slice(1));
+  } else if (match = req.path.match(/^\/search$/)) {
+    return search(req, res);
+  } else if (match = req.path.match(/^\/$/)) {
+    return getRoot(req, res);
+  } else {
+    return res.status(404).send('Not Found');
+  }
+}
+
+async function getRoot(req, res) {
+  res.status(501).send('Not Implemented');
+}
+
+async function getWay(req, res, match) {
+  res.status(501).send('Not Implemented');
+}
+
+async function getRelation(req, res, match) {
+  res.status(501).send('Not Implemented');
+}
+
+async function search(req, res) {
+  res.status(501).send('Not Implemented');
+}
+
+async function getNode(req, res, match) {
+  const [nodeId] = match;
 
   const query = `
     SELECT id, latitude, longitude, osm_timestamp, all_tags
