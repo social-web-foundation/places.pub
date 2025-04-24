@@ -136,14 +136,18 @@ async function partialMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
     FROM \`bigquery-public-data.geo_openstreetmap.planet_${type}s\`
     WHERE EXISTS (
       SELECT 1 FROM UNNEST(all_tags) t
-      WHERE t.key = 'name' AND LOWER(t.value) LIKE @query
+      WHERE t.key = 'name'
+      AND LOWER(t.value) LIKE @pattern
+      AND LOWER(t.value) != @query
     )
+    LIMIT @limit
   `;
 
   const [rows] = await bq.query({
     query: queryString,
     params: {
-      query: `%${query.toLowerCase()}%`,
+      pattern: `%${query.toLowerCase()}%`,
+      query: query.toLowerCase(),
       limit
     }
   });
