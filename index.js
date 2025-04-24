@@ -9,6 +9,19 @@ function tagArrayToObject(all_tags) {
   return tags;
 }
 
+function extractNameMap(tags) {
+  const nameMap = {};
+  for (const [key, value] of Object.entries(tags)) {
+    if (key.startsWith('name:')) {
+      const lang = key.split(':')[1];
+      if (lang && /^[a-z]{2,8}(-[A-Za-z0-9]+)*$/.test(lang)) {
+        nameMap[lang] = value;
+      }
+    }
+  }
+  return Object.keys(nameMap).length ? nameMap : undefined;
+}
+
 function osmTagsToVCardAddress(tags) {
   const {
     'addr:housenumber': number,
@@ -105,6 +118,7 @@ async function getWay(req, res, match) {
     type: ["Place", "geojson:Feature"],
     id: `https://places.pub/way/${wayId}`,
     name: tags.name,
+    nameMap: extractNameMap(tags),
     summary: tags.description,
     latitude: parseFloat(row.lat),
     longitude: parseFloat(row.lon),
@@ -173,6 +187,7 @@ async function getRelation(req, res, match) {
     type: ["Place", "geojson:Feature"],
     id: `https://places.pub/relation/${relationId}`,
     name: tags.name,
+    nameMap: extractNameMap(tags),
     summary: tags.description,
     latitude: parseFloat(row.lat),
     longitude: parseFloat(row.lon),
@@ -226,6 +241,7 @@ async function getNode(req, res, match) {
     type: 'Place',
     id: `https://places.pub/node/${nodeId}`,
     name: tags.name,
+    nameMap: extractNameMap(tags),
     summary: tags.description,
     latitude: parseFloat(row.latitude),
     longitude: parseFloat(row.longitude),
