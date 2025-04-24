@@ -180,7 +180,7 @@ async function search(req, res) {
     type: 'Collection',
     id: `https://places.pub/search?q=${encodeURIComponent(q)}`,
     name: `places.pub search results for "${q}"`,
-    totalItems: rows.length,
+    totalItems: items.length,
     items: items
   };
 
