@@ -26,6 +26,11 @@ const MAX_SEARCH_RESULTS = 100;
 
 let ReadMeHtml = null;
 
+// Function to round coordinates to 5 decimal places
+function roundCoord(coord) {
+  return Math.round(coord * 1e5) / 1e5;
+}
+
 function tagArrayToObject(all_tags) {
   const tags = {};
   for (const { key, value } of all_tags) {
@@ -261,8 +266,8 @@ async function getPlaceObject(req, res, match, type) {
     name: tags.name,
     nameMap: extractNameMap(tags),
     summary: tags.description,
-    latitude: parseFloat(row.lat),
-    longitude: parseFloat(row.lon),
+    latitude: roundCoord(parseFloat(row.lat)),
+    longitude: roundCoord(parseFloat(row.lon)),
     'dcterms:license': {
       type: 'Link',
       href: 'https://opendatacommons.org/licenses/odbl/1-0/',
