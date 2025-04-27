@@ -266,6 +266,7 @@ async function getPlaceObject(req, res, match, type) {
     name: tags.name,
     nameMap: extractNameMap(tags),
     summary: tags.description,
+    image: tags.image,
     latitude: roundCoord(parseFloat(row.lat)),
     longitude: roundCoord(parseFloat(row.lon)),
     'dcterms:license': {
