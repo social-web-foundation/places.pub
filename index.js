@@ -16,9 +16,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 const { BigQuery } = require('@google-cloud/bigquery');
-const { fs } = require('fs').promises;
-const { path } = require('path');
-const { marked } = require('marked');
+const fs = require('fs').promises;
+const path = require('path');
+const marked = require('marked');
 
 const bq = new BigQuery();
 
