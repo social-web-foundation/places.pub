@@ -16,9 +16,15 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 const { BigQuery } = require('@google-cloud/bigquery');
+const { fs } = require('fs').promises;
+const { path } = require('path');
+const { marked } = require('marked');
+
 const bq = new BigQuery();
 
 const MAX_SEARCH_RESULTS = 100;
+
+let ReadMeHtml = null;
 
 function tagArrayToObject(all_tags) {
   const tags = {};
@@ -84,7 +90,18 @@ exports.getPlace = async (req, res) => {
 }
 
 async function getRoot(req, res) {
-  res.status(501).send('Not Implemented');
+  if (ReadMeHtml === null) {
+    try {
+      const readmePath = path.join(__dirname, 'README.md');
+      const readmeContent = await fs.readFile(readmePath, 'utf8');
+      ReadMeHtml = marked.parse(readmeContent);
+    } catch (error) {
+      console.error('Error reading README.md:', error);
+      return res.status(500).send('Internal Server Error');
+    }
+  }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(ReadMeHtml);
 }
 
 async function exactMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
