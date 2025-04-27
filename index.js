@@ -69,11 +69,11 @@ function osmTagsToVCardAddress(tags) {
 exports.getPlace = async (req, res) => {
   let match = null;
   if (match = req.path.match(/^\/node\/(\d+)$/)) {
-    return getNode(req, res, match.slice(1));
+    return getPlaceObject(req, res, match.slice(1), 'node');
   } else if (match = req.path.match(/^\/way\/(\d+)$/)) {
-    return getWay(req, res, match.slice(1));
+    return getPlaceObject(req, res, match.slice(1), 'way');
   } else if (match = req.path.match(/^\/relation\/(\d+)$/)) {
-    return getRelation(req, res, match.slice(1));
+    return getPlaceObject(req, res, match.slice(1), 'relation');
   } else if (match = req.path.match(/^\/search$/)) {
     return search(req, res);
   } else if (match = req.path.match(/^\/$/)) {
@@ -192,18 +192,22 @@ async function search(req, res) {
   res.status(200).json(results);
 }
 
-async function getWay(req, res, match) {
-  const [wayId] = match;
+async function getPlaceObject(req, res, match, type) {
+  const [placeId] = match;
+  if (!placeId) return res.status(400).send('Bad Request');
+  if (!/^\d+$/.test(placeId)) return res.status(400).send('Bad Request');
+  if (type !== 'node' && type !== 'way' && type !== 'relation') return res.status(400).send('Bad Request');
+
+  const latlon = type === 'node' ? 'latitude AS lat, longitude AS lon' : 'ST_Y(ST_CENTROID(geometry)) AS lat, ST_X(ST_CENTROID(geometry)) AS lon';
 
   const query = `
     SELECT
       id,
       all_tags,
       osm_timestamp,
-      ST_Y(ST_CENTROID(geometry)) AS lat,
-      ST_X(ST_CENTROID(geometry)) AS lon,
+      ${latlon},
       ST_AsGeoJSON(geometry) AS geojson
-    FROM \`bigquery-public-data.geo_openstreetmap.planet_ways\`
+    FROM \`bigquery-public-data.geo_openstreetmap.planet_${type}s\`
     WHERE id = @id
     LIMIT 1
   `;
@@ -212,7 +216,7 @@ async function getWay(req, res, match) {
   try {
     [rows] = await bq.query({
       query,
-      params: { id: Number(wayId) }
+      params: { id: Number(placeId) }
     });
   } catch (err) {
     console.error(err);
@@ -236,7 +240,7 @@ async function getWay(req, res, match) {
   const place = {
     '@context': context,
     type: ["Place", "geojson:Feature"],
-    id: `https://places.pub/way/${wayId}`,
+    id: `https://places.pub/${type}/${placeId}`,
     name: tags.name,
     nameMap: extractNameMap(tags),
     summary: tags.description,
@@ -249,8 +253,8 @@ async function getWay(req, res, match) {
     },
     'dcterms:source': {
       type: 'Link',
-      href: `https://www.openstreetmap.org/way/${wayId}`,
-      name: `OpenStreetMap way ${wayId}`
+      href: `https://www.openstreetmap.org/${type}/${placeId}`,
+      name: `OpenStreetMap ${type} ${placeId}`
     },
     'geojson:hasGeometry': geometry,
     ...osmTagsToVCardAddress(tags)
@@ -259,124 +263,3 @@ async function getWay(req, res, match) {
   res.setHeader('Content-Type', 'application/activity+json');
   res.status(200).json(place);
 }
-
-async function getRelation(req, res, match) {
-  const [relationId] = match;
-
-  const query = `
-    SELECT
-      id,
-      all_tags,
-      osm_timestamp,
-      ST_Y(ST_CENTROID(geometry)) AS lat,
-      ST_X(ST_CENTROID(geometry)) AS lon,
-      ST_AsGeoJSON(geometry) AS geojson
-    FROM \`bigquery-public-data.geo_openstreetmap.planet_relations\`
-    WHERE id = @id
-    LIMIT 1
-  `;
-
-  let rows;
-  try {
-    [rows] = await bq.query({
-      query,
-      params: { id: Number(relationId) }
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).send('Internal Server Error');
-  }
-
-  if (!rows.length) return res.status(404).send('Not Found');
-
-  const row = rows[0];
-  const tags = tagArrayToObject(row.all_tags);
-  const geometry = JSON.parse(row.geojson);
-
-  const context = [
-    'https://www.w3.org/ns/activitystreams',
-    {
-      dcterms: 'http://purl.org/dc/terms/',
-      geojson: 'https://purl.org/geojson/vocab#'
-    }
-  ];
-
-  const place = {
-    '@context': context,
-    type: ["Place", "geojson:Feature"],
-    id: `https://places.pub/relation/${relationId}`,
-    name: tags.name,
-    nameMap: extractNameMap(tags),
-    summary: tags.description,
-    latitude: parseFloat(row.lat),
-    longitude: parseFloat(row.lon),
-    'dcterms:license': {
-      type: 'Link',
-      href: 'https://opendatacommons.org/licenses/odbl/1-0/',
-      name: 'Open Database License (ODbL) v1.0'
-    },
-    'dcterms:source': {
-      type: 'Link',
-      href: `https://www.openstreetmap.org/relation/${relationId}`,
-      name: `OpenStreetMap relation ${relationId}`
-    },
-    'geojson:hasGeometry': geometry,
-    ...osmTagsToVCardAddress(tags)
-  };
-
-  res.setHeader('Content-Type', 'application/activity+json');
-  res.status(200).json(place);
-}
-
-async function getNode(req, res, match) {
-  const [nodeId] = match;
-
-  const query = `
-    SELECT id, latitude, longitude, osm_timestamp, all_tags
-    FROM \`bigquery-public-data.geo_openstreetmap.planet_nodes\`
-    WHERE id = @id
-    LIMIT 1
-  `;
-
-  const [rows] = await bq.query({
-    query,
-    params: { id: Number(nodeId) }
-  });
-
-  if (!rows.length) return res.status(404).send('Not Found');
-
-  const row = rows[0];
-  const tags = tagArrayToObject(row.all_tags);
-
-  const context = [
-    'https://www.w3.org/ns/activitystreams',
-    {
-      dcterms: 'http://purl.org/dc/terms/'
-    }
-  ];
-
-  const place = {
-    '@context': context,
-    type: 'Place',
-    id: `https://places.pub/node/${nodeId}`,
-    name: tags.name,
-    nameMap: extractNameMap(tags),
-    summary: tags.description,
-    latitude: parseFloat(row.latitude),
-    longitude: parseFloat(row.longitude),
-    'dcterms:license': {
-      type: 'Link',
-      href: 'https://opendatacommons.org/licenses/odbl/1-0/',
-      name: 'Open Database License (ODbL) v1.0'
-    },
-    'dcterms:source': {
-      type: 'Link',
-      href: `https://www.openstreetmap.org/node/${nodeId}`,
-      name: `OpenStreetMap node ${nodeId}`
-    },
-    ...osmTagsToVCardAddress(tags)
-  };
-
-  res.setHeader('Content-Type', 'application/activity+json');
-  res.status(200).json(place);
-};
