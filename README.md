@@ -233,8 +233,10 @@ The [`Travel`](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-travel) act
 The places.pub service provides a rudimentary search API for finding places. The search API is a simple HTTP GET request to the following URL:
 
 ```
-https://places.pub/search?q={query}
+https://places.pub/search?q={query}(&bbox={minLatitude},{minLongitude},{maxLatitude},{maxLongitude})
 ```
+
+Here `{query}` is the search query and `{bbox}` is an optional bounding box for the search. The bounding box is specified as a comma-separated list of four values: `minLatitude`, `minLongitude`, `maxLatitude`, and `maxLongitude`. The bounding box is used to limit the search results to places within the specified area.
 
 The search API does case-insenstive search of the place's default name. No other tags or properties are searched.
 
