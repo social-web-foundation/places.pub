@@ -124,7 +124,15 @@ async function matchSearch(query, parts, type, limit = MAX_SEARCH_RESULTS, exact
     if (type === 'node') {
       bboxClause = `latitude BETWEEN @minLat AND @maxLat AND longitude BETWEEN @minLon AND @maxLon`;
     } else {
-      bboxClause = `ST_Intersects(geometry, ST_MakeEnvelope(@minLon, @minLat, @maxLon, @maxLat))`;
+      bboxClause = `ST_Intersects(geometry, ST_GeogFromText(CONCAT(
+        'POLYGON((',
+          @minLon, ' ', @minLat, ', ',
+          @minLon, ' ', @maxLat, ', ',
+          @maxLon, ' ', @maxLat, ', ',
+          @maxLon, ' ', @minLat, ', ',
+          @minLon, ' ', @minLat,
+        '))'
+        )))`;
     }
   }
 
