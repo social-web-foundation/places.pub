@@ -89,6 +89,8 @@ exports.getPlace = async (req, res) => {
     return search(req, res);
   } else if (match = req.path.match(/^\/$/)) {
     return getRoot(req, res);
+  } else if (match = req.url.match(/^\/osm\/(.+)$/)) {
+    return res.redirect(301, `https://www.openstreetmap.org/${match[1]}`);
   } else {
     return res.status(404).send('Not Found');
   }
