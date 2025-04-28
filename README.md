@@ -254,7 +254,7 @@ The API returns an Activity Streams 2.0 `Collection` object with the following p
 To search for the Montreal bar "Bily Kun", you can use the following command:
 
 ```bash
-curl -H 'Accept: application/activity+json' 'https://places.pub/search?q=bily%20kun'
+curl -H 'Accept: application/activity+json' 'https://places.pub/search?q=bily%20kun&bbox=-74.0,45.0,-73.0,46.0'
 ```
 
 This will return the following JSON-LD object:
@@ -262,7 +262,7 @@ This will return the following JSON-LD object:
 ```json
 {
   "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "https://places.pub/search?q=bily%20kun",
+  "id": "https://places.pub/search?q=bily%20kun&bbox=-74.0,45.0,-73.0,46.0",
   "type": "Collection",
   "totalItems": 1,
   "items": [
