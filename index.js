@@ -111,7 +111,7 @@ async function getRoot(req, res) {
   res.send(ReadMeHtml);
 }
 
-async function matchSearch(query, parts, type, limit = MAX_SEARCH_RESULTS, exactMatch = true) {
+async function matchSearch(pattern, parts, type, limit = MAX_SEARCH_RESULTS, exactMatch = true) {
 
   if (limit <= 0) {
     return [];
@@ -138,16 +138,18 @@ async function matchSearch(query, parts, type, limit = MAX_SEARCH_RESULTS, exact
     }
   }
 
-  const matchClause = (exactMatch) ?
-    `EXISTS (
-      SELECT 1 FROM UNNEST(all_tags) t
-      WHERE t.key = 'name' AND LOWER(t.value) = @exact
-    )` :
-    `EXISTS (
-      SELECT 1 FROM UNNEST(all_tags) t
-      WHERE t.key = 'name' AND LOWER(t.value) LIKE @partial
-      AND LOWER(t.value) != @exact
-    )`;
+  const matchClause = (pattern) ?
+    (exactMatch) ?
+      `EXISTS (
+        SELECT 1 FROM UNNEST(all_tags) t
+        WHERE t.key = 'name' AND LOWER(t.value) = @exact
+      )` :
+      `EXISTS (
+        SELECT 1 FROM UNNEST(all_tags) t
+        WHERE t.key = 'name' AND LOWER(t.value) LIKE @partial
+        AND LOWER(t.value) != @exact
+      )` :
+    '1 = 1';
 
   const queryString = `
     SELECT
@@ -161,11 +163,12 @@ async function matchSearch(query, parts, type, limit = MAX_SEARCH_RESULTS, exact
     LIMIT @limit
   `;
 
-  const params = {
-    exact: query.toLowerCase(),
-    partial: `%${query.toLowerCase()}%`,
-    limit
-  };
+  const params = { limit }
+
+  if (pattern) {
+    params.exact = pattern.toLowerCase();
+    params.partial = `%${pattern.toLowerCase()}%`;
+  }
 
   if (parts && parts.length === 4) {
     params.minLat = parts[1];
