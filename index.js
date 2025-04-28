@@ -109,69 +109,64 @@ async function getRoot(req, res) {
   res.send(ReadMeHtml);
 }
 
-async function exactMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
+async function matchSearch(query, parts, type, limit = MAX_SEARCH_RESULTS, exactMatch = true) {
 
   if (limit <= 0) {
     return [];
   }
+
+  let bboxClause;
+
+  if (!parts || parts.length !== 4) {
+    bboxClause = '1 = 1'; // No bounding box, return all
+  } else {
+    const [minLon, minLat, maxLon, maxLat] = parts;
+    if (type === 'node') {
+      bboxClause = `latitude BETWEEN @minLat AND @maxLat AND longitude BETWEEN @minLon AND @maxLon`;
+    } else {
+      bboxClause = `ST_Intersects(geometry, ST_MakeEnvelope(@minLon, @minLat, @maxLon, @maxLat))`;
+    }
+  }
+
+  const matchClause = (exactMatch) ?
+    `EXISTS (
+      SELECT 1 FROM UNNEST(all_tags) t
+      WHERE t.key = 'name' AND LOWER(t.value) = @exact
+    )` :
+    `EXISTS (
+      SELECT 1 FROM UNNEST(all_tags) t
+      WHERE t.key = 'name' AND LOWER(t.value) LIKE @partial
+      AND LOWER(t.value) != @exact
+    )`;
 
   const queryString = `
     SELECT
       id,
       all_tags
     FROM \`bigquery-public-data.geo_openstreetmap.planet_${type}s\`
-    WHERE EXISTS (
-      SELECT 1 FROM UNNEST(all_tags) t
-      WHERE t.key = 'name' AND LOWER(t.value) = @query
-    )
+    WHERE
+      ${bboxClause}
+    AND
+      ${matchClause}
     LIMIT @limit
   `;
 
-  const [rows] = await bq.query({
-    query: queryString,
-    params: {
-      query: query.toLowerCase(),
-      limit
-    }
-  });
+  const params = {
+    exact: query.toLowerCase(),
+    partial: `%${query.toLowerCase()}%`,
+    limit
+  };
 
-  return rows.map(row => {
-    const tags = tagArrayToObject(row.all_tags);
-    return {
-      type: 'Place',
-      id: `https://places.pub/${type}/${row.id}`,
-      name: tags.name
-    };
-  });
-}
-
-async function partialMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
-
-  if (limit <= 0) {
-    return [];
+  if (parts && parts.length === 4) {
+    params.minLat = parts[1];
+    params.minLon = parts[0];
+    params.maxLat = parts[3];
+    params.maxLon = parts[2];
   }
 
-  const queryString = `
-    SELECT
-      id,
-      all_tags
-    FROM \`bigquery-public-data.geo_openstreetmap.planet_${type}s\`
-    WHERE EXISTS (
-      SELECT 1 FROM UNNEST(all_tags) t
-      WHERE t.key = 'name'
-      AND LOWER(t.value) LIKE @pattern
-      AND LOWER(t.value) != @query
-    )
-    LIMIT @limit
-  `;
-
   const [rows] = await bq.query({
     query: queryString,
-    params: {
-      pattern: `%${query.toLowerCase()}%`,
-      query: query.toLowerCase(),
-      limit
-    }
+    params
   });
 
   return rows.map(row => {
@@ -185,18 +180,48 @@ async function partialMatchSearch(query, type, limit = MAX_SEARCH_RESULTS) {
 }
 
 async function search(req, res) {
-  const { q } = req.query;
-  if (!q) return res.status(400).send('Bad Request');
-  if (q.length < 3) return res.status(400).send('Bad Request');
+
+  const { q, bbox } = req.query;
+
+  if (!q && !bbox) return res.status(400).send('Bad Request');
+  if (q && q.length < 3) return res.status(400).send('Bad Request');
+
+  let parts = [];
+
+  if (bbox) {
+
+    parts = bbox.split(',');
+
+    if (parts.length !== 4) {
+      return res.status(400).send('Bad Request');
+    }
+
+    if (parts.some((p) => !/^-?\d+(\.\d+)?$/.test(p))) {
+      return res.status(400).send('Bad Request');
+    }
+
+    parts = parts.map((p) => parseFloat(p));
+
+    if (parts.some((p) => isNaN(p))) {
+      return res.status(400).send('Bad Request');
+    }
+
+    if (parts[0] > 180 || parts[0] < -180 ||
+      parts[1] > 90 || parts[1] < -90 ||
+      parts[2] > 180 || parts[2] < -180 ||
+      parts[3] > 90 || parts[3] < -90) {
+      return res.status(400).send('Bad Request');
+    }
+  }
 
   let items = [];
 
   for (const type of ['node', 'way', 'relation']) {
-    items = items.concat(await exactMatchSearch(q, type, MAX_SEARCH_RESULTS - items.length));
+    items = items.concat(await matchSearch(q, parts, type, MAX_SEARCH_RESULTS - items.length, true));
   }
 
   for (const type of ['node', 'way', 'relation']) {
-    items = items.concat(await partialMatchSearch(q, type, MAX_SEARCH_RESULTS - items.length));
+    items = items.concat(await matchSearch(q, parts, type, MAX_SEARCH_RESULTS - items.length, false));
   }
 
   const context = 'https://www.w3.org/ns/activitystreams';
@@ -204,7 +229,7 @@ async function search(req, res) {
   const results = {
     '@context': context,
     type: 'Collection',
-    id: `https://places.pub/search?q=${encodeURIComponent(q)}`,
+    id: req.url,
     name: `places.pub search results for "${q}"`,
     totalItems: items.length,
     items: items
