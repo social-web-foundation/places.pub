@@ -90,7 +90,7 @@ exports.getPlace = async (req, res) => {
   } else if (match = req.path.match(/^\/$/)) {
     return getRoot(req, res);
   } else if (match = req.url.match(/^\/osm\/(.+)$/)) {
-    return res.redirect(301, `https://www.openstreetmap.org/${match[1]}`);
+    return res.redirect(301, `https://places.pub/${match[1]}`);
   } else {
     return res.status(404).send('Not Found');
   }
@@ -239,7 +239,7 @@ async function search(req, res) {
   const results = {
     '@context': context,
     type: 'Collection',
-    id: `https://${req.headers['host']}${req.url}`,
+    id: `https://places.pub${req.url}`,
     name: `places.pub search results for "${q}"`,
     totalItems: items.length,
     items: items
