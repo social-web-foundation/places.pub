@@ -237,7 +237,7 @@ async function search(req, res) {
   const results = {
     '@context': context,
     type: 'Collection',
-    id: req.url,
+    id: `https://${req.headers['host']}${req.url}`,
     name: `places.pub search results for "${q}"`,
     totalItems: items.length,
     items: items
