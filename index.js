@@ -243,7 +243,7 @@ async function search(req, res) {
     '@context': context,
     type: 'Collection',
     id: `https://places.pub${req.url}`,
-    name: `places.pub search results for "${q}"`,
+    name: `places.pub search results${(q ? ` for query "${q}"` : '')} ${(bbox ? ` inside bounding box (${bbox})` : '')}`,
     totalItems: items.length,
     items: items
   };
