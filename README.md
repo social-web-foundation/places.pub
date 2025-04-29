@@ -2,6 +2,27 @@
 
 [places.pub](https://places.pub) is a service that makes OpenStreetMap geographical data available as [ActivityPub](https://activitypub.rocks/) objects.
 
+It is a project of the [Social Web Foundation](https://socialwebfoundation.org/), a non-profit organization that promotes the development of the ActivityPub protocol and the social web.
+
+## Table of Contents
+
+- [Install](#install)
+- [Usage](#usage)
+  - [Places](#places)
+    - [URL](#url)
+    - [Properties](#properties)
+    - [Examples](#examples)
+      - [Fetching a place](#fetching-a-place)
+      - [Location for an actor](#location-for-an-actor)
+      - [Location for a content object](#location-for-a-content-object)
+      - [Location for an activity](#location-for-an-activity)
+      - [Geosocial activities](#geosocial-activities)
+  - [Search](#search)
+    - [Example](#example)
+- [Contributing](#contributing)
+- [License](#license)
+
+
 ## Install
 
 Most developers can use the live web service at [places.pub](https://places.pub) without installing any software.
