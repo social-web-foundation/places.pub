@@ -107,8 +107,39 @@ async function getRoot(req, res) {
       return res.status(500).send('Internal Server Error');
     }
   }
+  const fullPage = `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>places.pub</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: sans-serif;
+        background: #fff;
+      }
+      main {
+        max-width: 80ch;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      ${ReadMeHtml}
+    </main>
+  </body>
+  </html>
+  `;
+
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(ReadMeHtml);
+  res.status(200).send(fullPage);
 }
 
 async function matchSearch(pattern, parts, type, limit = MAX_SEARCH_RESULTS, exactMatch = true) {
