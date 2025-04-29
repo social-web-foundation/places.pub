@@ -37,7 +37,13 @@ Places in the places.pub service are represented as ActivityPub objects. You can
 
 #### URL
 
-Each OpenStreetMap place is represented as an ActivityPub object, with an http URL as its `id`. OpenStreetMaps places have one of three types: `node`, `way`, or `relation`. The `type` field in the ActivityPub object URL is set to the type of the OpenStreetMap place. So, the URL for a place matches the URL template:
+Each OpenStreetMap place is represented as an ActivityPub object, with an https URL as its `id`. OpenStreetMaps places have one of three types: `node`, `way`, or `relation`.
+
+- `node`: A single point on the planet, with a latitude and longitude.
+- `way`: A series of points. It can be closed (the ends connect) or open (they don't). A way can be a line (like a road) or a polygon (like a building).
+- `relation`: A collection of nodes and ways. A relation can be used to represent a complex object, like a bus route or a building with multiple parts.
+
+The `type` field in the ActivityPub object URL is set to the type of the OpenStreetMap place. So, the URL for a place matches the URL template:
 
 ```
 https://places.pub/{type}/{id}
