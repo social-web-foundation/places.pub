@@ -1,12 +1,12 @@
 # places.pub
 
-This is the source code for [places.pub](https://places.pub), a service that makes OpenStreetMap geographical data available as ActivityPub objects.
+[places.pub](https://places.pub) is a service that makes OpenStreetMap geographical data available as [ActivityPub](https://activitypub.rocks/) objects.
 
 ## Install
 
 Most developers can use the live web service at [places.pub](https://places.pub) without installing any software.
 
-If you want to run your own instance, you need to use Google Cloud Run functions or a compatible service (if those exist). We'd love to have mirrors, especially managed by other non-profit organizations and hosted on other cloud providers. Please let us know if you do this!
+If you want to run your own instance, you need to use [Google Cloud Run functions](https://cloud.google.com/run) or a compatible service (if those exist). We'd love to have mirrors, especially managed by other non-profit organizations and hosted on other cloud providers. Please let us know if you do this!
 
 ## Usage
 
@@ -249,6 +249,8 @@ The API returns an Activity Streams 2.0 `Collection` object with the following p
   - `type`: The Activity Streams type `Place`.
   - `name`: The default name of the place, if provided.
 
+The search API is slow and not very accurate. [Nominatim](https://nominatim.org/) is a better search API for OpenStreetMap data. It's possible to construct places.pub object URLs from the Nominatim search results, but this is not done automatically.
+
 #### Example
 
 To search for the Montreal bar "Bily Kun", you can use the following command:
@@ -278,6 +280,8 @@ This will return the following JSON-LD object:
 ## Contributing
 
 We welcome contributions to the places.pub project! If you have an idea for a new feature, bug fix, or improvement, please open an issue or pull request on GitHub at [https://github.com/social-web-foundation/places.pub](https://github.com/social-web-foundation/places.pub).
+
+The service is provided by a [Google Cloud Run function](https://cloud.google.com/run) written in JavaScript. It uses the [OpenStreetMap](https://www.openstreetmap.org/) [public dataset](https://console.cloud.google.com/marketplace/product/openstreetmap/geo-openstreetmap) as its data source.
 
 ## License
 
