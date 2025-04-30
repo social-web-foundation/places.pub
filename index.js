@@ -332,6 +332,7 @@ async function getPlaceObject(req, res, match, type) {
     '@context': context,
     type: ["Place", "geojson:Feature"],
     id: `https://places.pub/${type}/${placeId}`,
+    to: ['as:Public'],
     name: tags.name,
     nameMap: extractNameMap(tags),
     summary: tags.description,
