@@ -339,6 +339,8 @@ async function getPlaceObject(req, res, match, type) {
     image: tags.image,
     latitude: roundCoord(parseFloat(row.lat)),
     longitude: roundCoord(parseFloat(row.lon)),
+    altitude: (tags.ele) ? Math.round(parseFloat(tags.ele)) : undefined,
+    units: (tags.ele) ? 'm' : undefined,
     'dcterms:license': {
       type: 'Link',
       href: 'https://opendatacommons.org/licenses/odbl/1-0/',
