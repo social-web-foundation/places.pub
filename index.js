@@ -78,7 +78,16 @@ function osmTagsToVCardAddress(tags) {
 }
 
 exports.getPlace = async (req, res) => {
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send('');
+  }
+
   let match = null;
+
   if (match = req.path.match(/^\/node\/(\d+)$/)) {
     return getPlaceObject(req, res, match.slice(1), 'node');
   } else if (match = req.path.match(/^\/way\/(\d+)$/)) {
