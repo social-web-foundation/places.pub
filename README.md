@@ -22,7 +22,6 @@ It is a project of the [Social Web Foundation](https://socialwebfoundation.org/)
 - [Contributing](#contributing)
 - [License](#license)
 
-
 ## Install
 
 Most developers can use the live web service at [places.pub](https://places.pub) without installing any software.
@@ -45,7 +44,7 @@ Each OpenStreetMap place is represented as an ActivityPub object, with an https 
 
 The `type` field in the ActivityPub object URL is set to the type of the OpenStreetMap place. So, the URL for a place matches the URL template:
 
-```
+```url
 https://places.pub/{type}/{id}
 ```
 
@@ -259,7 +258,7 @@ The [`Travel`](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-travel) act
 
 The places.pub service provides a rudimentary search API for finding places. The search API is a simple HTTP GET request to the following URL:
 
-```
+```url
 https://places.pub/search?q={query}(&bbox={minLatitude},{minLongitude},{maxLatitude},{maxLongitude})
 ```
 
@@ -268,6 +267,7 @@ Here `{query}` is the search query and `{bbox}` is an optional bounding box for 
 The search API does case-insenstive search of the place's default name. No other tags or properties are searched.
 
 The API returns an Activity Streams 2.0 `Collection` object with the following properties:
+
 - `id`: The URL of the search results.
 - `type`: The Activity Streams type `Collection`.
 - `totalItems`: The total number of items in the collection.
