@@ -207,7 +207,7 @@ The [`Arrive`](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-arrive) act
 }
 ```
 
-The [`Leave`](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-leave) activity is used to indicate that an actor has left a place. This can provide an additional level of user safety, since it does not indicate the user's current location. The `location` property of the `Leave` activity indicates the place where the actor has left.
+The [`Leave`](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-leave) activity is used to indicate that an actor has left a place. This can provide an additional level of user safety, since it does not indicate the user's current location. The `object` property of the `Leave` activity indicates the place where the actor has left.
 
 ```json
 {
