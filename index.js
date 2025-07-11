@@ -178,18 +178,20 @@ async function matchSearch(pattern, parts, type, limit = MAX_SEARCH_RESULTS, exa
     }
   }
 
-  const matchClause = (pattern) ?
-    (exactMatch) ?
-      `EXISTS (
+  const matchClause = (pattern)
+    ? (exactMatch)
+      ? `EXISTS (
         SELECT 1 FROM UNNEST(all_tags) t
         WHERE t.key = 'name' AND LOWER(t.value) = @exact
-      )` :
-      `EXISTS (
+      )`
+      : `EXISTS (
         SELECT 1 FROM UNNEST(all_tags) t
         WHERE t.key = 'name' AND LOWER(t.value) LIKE @partial
         AND LOWER(t.value) != @exact
-      )` :
-    '1 = 1';
+      )`
+    : `EXISTS (
+        SELECT 1 FROM UNNEST(all_tags) t
+        WHERE t.key = 'name' )`;
 
   const queryString = `
     SELECT
