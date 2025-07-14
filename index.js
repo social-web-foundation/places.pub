@@ -199,14 +199,14 @@ async function bboxSearch(parts) {
 async function nameBbboxSearch(q, parts) {
   const [w, s, e, n] = parts
   const esc = q.replace(/["\\]/g, '\\$&');
-  const q = `[out:json];
+  const query = `[out:json];
     (
       node(${s},${w},${n},${e})["name"~"${esc}",i];
       way (${s},${w},${n},${e})["name"~"${esc}",i];
       relation(${s},${w},${n},${e})["name"~"${esc}",i];
     );
     out body; >; out skel qt;`;
-  const json = await runOverpass(q);
+  const json = await runOverpass(query);
   return json.elements
 }
 
