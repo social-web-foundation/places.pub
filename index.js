@@ -28,7 +28,7 @@ let ReadMeHtml = null;
 
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
-const version = null
+let version = null
 
 async function getVersion() {
   if (!version) {
