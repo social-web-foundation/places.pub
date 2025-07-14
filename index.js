@@ -199,7 +199,12 @@ async function bboxSearch(parts) {
       node(${s},${w},${n},${e})["name"];
       way (${s},${w},${n},${e})["name"];
       relation(${s},${w},${n},${e})["name"];
-    );
+    ) -> .inside;
+
+    is_in(${s},${w});
+    rel(pivot);
+    relation._["name"] -> .containers;
+    (.inside; .containers;);
     out tags;`;
   const json = await runOverpass(query);
   return json.elements
@@ -213,7 +218,12 @@ async function nameBbboxSearch(q, parts) {
       node(${s},${w},${n},${e})["name"~"${esc}",i];
       way (${s},${w},${n},${e})["name"~"${esc}",i];
       relation(${s},${w},${n},${e})["name"~"${esc}",i];
-    );
+    ) -> .inside;
+
+    is_in(${s},${w});
+    rel(pivot);
+    relation._["name"] -> .containers;
+    (.inside; .containers;);
     out tags;`;
   const json = await runOverpass(query);
   return json.elements
