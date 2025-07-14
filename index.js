@@ -27,7 +27,7 @@ const MAX_SEARCH_RESULTS = 100;
 let ReadMeHtml = null;
 
 const packagePath = path.join(__dirname, 'package.json');
-const packageContent = await fs.readFile(packagePath, 'utf8');
+const packageContent = fs.readFileSync(packagePath, 'utf8');
 const package = JSON.parse(packageContent)
 
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
