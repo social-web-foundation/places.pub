@@ -260,7 +260,6 @@ async function search(req, res) {
       ? await bboxSearch(parts)
       : await nameSearch(q)
 
-  items = items.filter(item => item.tags && item.ta)
   const places = items.map(item => {
     return {
       id: `https://places.pub/${item.type}/${item.id}`,
