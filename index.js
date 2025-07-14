@@ -197,7 +197,7 @@ async function bboxSearch(parts) {
   const query = `[out:json];
     (
       node(${s},${w},${n},${e})["name"];
-      way (${s},${w},${n},${e})["name"][!"highway"];
+      way (${s},${w},${n},${e})["name"];
       relation(${s},${w},${n},${e})["name"];
     ) -> .inside;
 
@@ -216,7 +216,7 @@ async function nameBbboxSearch(q, parts) {
   const query = `[out:json];
     (
       node(${s},${w},${n},${e})["name"~"${esc}",i];
-      way (${s},${w},${n},${e})["name"~"${esc}",i][!"highway"];
+      way (${s},${w},${n},${e})["name"~"${esc}",i];
       relation(${s},${w},${n},${e})["name"~"${esc}",i];
     ) -> .inside;
 
