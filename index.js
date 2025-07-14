@@ -46,7 +46,7 @@ async function runOverpass(query) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': `places.pub/${package.version} (https://github.com/social-web-foundation/places.pub; evan@socialwebfoundation.org)`
+      'User-Agent': `places.pub/${version} (https://places.pub/; https://github.com/social-web-foundation/places.pub; evan@socialwebfoundation.org)`
     },
     body: 'data=' + encodeURIComponent(query)
   });
