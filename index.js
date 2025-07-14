@@ -196,9 +196,9 @@ async function bboxSearch(parts) {
   const [w, s, e, n] = parts
   const query = `[out:json];
     (
-      node(${s},${w},${n},${e});
-      way (${s},${w},${n},${e});
-      relation(${s},${w},${n},${e});
+      node(${s},${w},${n},${e})["name"];
+      way (${s},${w},${n},${e})["name"];
+      relation(${s},${w},${n},${e})["name"];
     );
     out body; >; out skel qt;`;
   const json = await runOverpass(query);
