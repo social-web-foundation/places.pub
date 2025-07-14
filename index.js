@@ -254,7 +254,7 @@ async function search(req, res) {
     }
   }
 
-  let items = (q && bbox)
+  const items = (q && bbox)
     ? await nameBbboxSearch(q, parts)
     : (bbox)
       ? await bboxSearch(parts)
