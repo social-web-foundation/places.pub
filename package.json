@@ -4,7 +4,7 @@
   "main": "index.js",
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.0",
-    "@google-cloud/functions-framework": "^3.0.0",
+    "@google-cloud/functions-framework": "^4.0.0",
     "marked": "^16.0.0"
   },
   "engines": {
