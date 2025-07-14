@@ -26,13 +26,22 @@ const MAX_SEARCH_RESULTS = 100;
 
 let ReadMeHtml = null;
 
-const packagePath = path.join(__dirname, 'package.json');
-const packageContent = fs.readFileSync(packagePath, 'utf8');
-const package = JSON.parse(packageContent)
-
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
+const version = null
+
+async function getVersion() {
+  if (!version) {
+    const packagePath = path.join(__dirname, 'package.json');
+    const packageContent = await fs.readFile(packagePath, 'utf8');
+    const package = JSON.parse(packageContent)
+    version = package.version
+  }
+  return version
+}
+
 async function runOverpass(query) {
+  const version = await getVersion()
   const resp = await fetch(OVERPASS_URL, {
     method: 'POST',
     headers: {
