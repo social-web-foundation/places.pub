@@ -187,7 +187,7 @@ async function nameSearch(q) {
       way ["name"~"${esc}",i];
       relation["name"~"${esc}",i];
     );
-    out body; >; out skel qt;`;
+    out tags;`;
   const json = await runOverpass(query)
   return json.elements
 }
@@ -200,7 +200,7 @@ async function bboxSearch(parts) {
       way (${s},${w},${n},${e})["name"];
       relation(${s},${w},${n},${e})["name"];
     );
-    out body; >; out skel qt;`;
+    out tags;`;
   const json = await runOverpass(query);
   return json.elements
 }
@@ -214,7 +214,7 @@ async function nameBbboxSearch(q, parts) {
       way (${s},${w},${n},${e})["name"~"${esc}",i];
       relation(${s},${w},${n},${e})["name"~"${esc}",i];
     );
-    out body; >; out skel qt;`;
+    out tags;`;
   const json = await runOverpass(query);
   return json.elements
 }
@@ -254,12 +254,13 @@ async function search(req, res) {
     }
   }
 
-  const items = (q && bbox)
+  let items = (q && bbox)
     ? await nameBbboxSearch(q, parts)
     : (bbox)
       ? await bboxSearch(parts)
       : await nameSearch(q)
 
+  items = items.filter(item => item.tags && item.ta)
   const places = items.map(item => {
     return {
       id: `https://places.pub/${item.type}/${item.id}`,
