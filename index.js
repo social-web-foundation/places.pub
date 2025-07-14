@@ -26,6 +26,25 @@ const MAX_SEARCH_RESULTS = 100;
 
 let ReadMeHtml = null;
 
+const packagePath = path.join(__dirname, 'package.json');
+const packageContent = await fs.readFile(packagePath, 'utf8');
+const package = JSON.parse(packageContent)
+
+const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+
+async function runOverpass(query) {
+  const resp = await fetch(OVERPASS_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': `places.pub/${package.version} (https://github.com/social-web-foundation/places.pub; evan@socialwebfoundation.org)`
+    },
+    body: 'data=' + encodeURIComponent(query)
+  });
+  if (!resp.ok) throw new Error(`Overpass error ${resp.status}`);
+  return resp.json();  // full envelope: { version, osm3s, elements, ... }
+}
+
 // Function to round coordinates to 5 decimal places
 function roundCoord(coord) {
   return Math.round(coord * 1e5) / 1e5;
@@ -151,87 +170,44 @@ async function getRoot(req, res) {
   res.status(200).send(fullPage);
 }
 
-async function matchSearch(pattern, parts, type, limit = MAX_SEARCH_RESULTS, exactMatch = true) {
+async function nameSearch(q) {
+  const esc = q.replace(/["\\]/g, '\\$&');
+  const query = `[out:json];
+    (
+      node["name"~"${esc}",i];
+      way ["name"~"${esc}",i];
+      relation["name"~"${esc}",i];
+    );
+    out body; >; out skel qt;`;
+  const json = await runOverpass(query)
+  return json.elements
+}
 
-  if (limit <= 0) {
-    return [];
-  }
+async function bboxSearch(parts) {
+  const [w, s, e, n] = parts
+  const query = `[out:json];
+    (
+      node(${s},${w},${n},${e});
+      way (${s},${w},${n},${e});
+      relation(${s},${w},${n},${e});
+    );
+    out body; >; out skel qt;`;
+  const json = await runOverpass(query);
+  return json.elements
+}
 
-  let bboxClause;
-
-  if (!parts || parts.length !== 4) {
-    bboxClause = '1 = 1'; // No bounding box, return all
-  } else {
-    const [minLon, minLat, maxLon, maxLat] = parts;
-    if (type === 'node') {
-      bboxClause = `latitude BETWEEN @minLat AND @maxLat AND longitude BETWEEN @minLon AND @maxLon`;
-    } else {
-      bboxClause = `ST_Intersects(geometry, ST_GeogFromText(CONCAT(
-        'POLYGON((',
-          @minLon, ' ', @minLat, ', ',
-          @minLon, ' ', @maxLat, ', ',
-          @maxLon, ' ', @maxLat, ', ',
-          @maxLon, ' ', @minLat, ', ',
-          @minLon, ' ', @minLat,
-        '))'
-        )))`;
-    }
-  }
-
-  const matchClause = (pattern)
-    ? (exactMatch)
-      ? `EXISTS (
-        SELECT 1 FROM UNNEST(all_tags) t
-        WHERE t.key = 'name' AND LOWER(t.value) = @exact
-      )`
-      : `EXISTS (
-        SELECT 1 FROM UNNEST(all_tags) t
-        WHERE t.key = 'name' AND LOWER(t.value) LIKE @partial
-        AND LOWER(t.value) != @exact
-      )`
-    : `EXISTS (
-        SELECT 1 FROM UNNEST(all_tags) t
-        WHERE t.key = 'name' )`;
-
-  const queryString = `
-    SELECT
-      id,
-      all_tags
-    FROM \`bigquery-public-data.geo_openstreetmap.planet_${type}s\`
-    WHERE
-      ${bboxClause}
-    AND
-      ${matchClause}
-    LIMIT @limit
-  `;
-
-  const params = { limit }
-
-  if (pattern) {
-    params.exact = pattern.toLowerCase();
-    params.partial = `%${pattern.toLowerCase()}%`;
-  }
-
-  if (parts && parts.length === 4) {
-    params.minLat = parts[1];
-    params.minLon = parts[0];
-    params.maxLat = parts[3];
-    params.maxLon = parts[2];
-  }
-
-  const [rows] = await bq.query({
-    query: queryString,
-    params
-  });
-
-  return rows.map(row => {
-    const tags = tagArrayToObject(row.all_tags);
-    return {
-      type: 'Place',
-      id: `https://places.pub/${type}/${row.id}`,
-      name: tags.name
-    };
-  });
+async function nameBbboxSearch(q, parts) {
+  const [w, s, e, n] = parts
+  const esc = q.replace(/["\\]/g, '\\$&');
+  const q = `[out:json];
+    (
+      node(${s},${w},${n},${e})["name"~"${esc}",i];
+      way (${s},${w},${n},${e})["name"~"${esc}",i];
+      relation(${s},${w},${n},${e})["name"~"${esc}",i];
+    );
+    out body; >; out skel qt;`;
+  const json = await runOverpass(q);
+  return json.elements
 }
 
 async function search(req, res) {
@@ -269,15 +245,19 @@ async function search(req, res) {
     }
   }
 
-  let items = [];
+  const items = (q && bbox)
+    ? await nameBbboxSearch(q, parts)
+    : (bbox)
+      ? await bboxSearch(parts)
+      : await nameSearch(q)
 
-  for (const type of ['node', 'way', 'relation']) {
-    items = items.concat(await matchSearch(q, parts, type, MAX_SEARCH_RESULTS - items.length, true));
-  }
-
-  for (const type of ['node', 'way', 'relation']) {
-    items = items.concat(await matchSearch(q, parts, type, MAX_SEARCH_RESULTS - items.length, false));
-  }
+  const places = items.map(item => {
+    return {
+      id: `https://places.pub/${item.type}/${item.id}`,
+      type: 'Place',
+      name: item.tags.name
+    }
+  })
 
   const context = 'https://www.w3.org/ns/activitystreams';
 
@@ -287,7 +267,7 @@ async function search(req, res) {
     id: `https://places.pub${req.url}`,
     name: `places.pub search results${(q ? ` for query "${q}"` : '')} ${(bbox ? ` inside bounding box (${bbox})` : '')}`,
     totalItems: items.length,
-    items: items
+    items: places
   };
 
   res.setHeader('Content-Type', 'application/activity+json');
