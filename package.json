@@ -5,6 +5,7 @@
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.0",
     "@google-cloud/functions-framework": "^4.0.0",
+    "http-problem-details": "^0.1.7",
     "marked": "^16.0.0"
   },
   "engines": {

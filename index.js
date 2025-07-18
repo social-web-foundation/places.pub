@@ -15,12 +15,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-const { BigQuery } = require('@google-cloud/bigquery');
 const fs = require('fs').promises;
 const path = require('path');
 const marked = require('marked');
-
-const bq = new BigQuery();
+const { ProblemDocument } = require('http-problem-details');
 
 const MAX_SEARCH_RESULTS = 100;
 
@@ -106,22 +104,47 @@ exports.getPlace = async (req, res) => {
     return res.status(204).send('');
   }
 
-  let match = null;
+  try {
+    let match = null;
 
-  if (match = req.path.match(/^\/node\/(\d+)$/)) {
-    return getPlaceObject(req, res, match[0], 'node');
-  } else if (match = req.path.match(/^\/way\/(\d+)$/)) {
-    return getPlaceObject(req, res, match[0], 'way');
-  } else if (match = req.path.match(/^\/relation\/(\d+)$/)) {
-    return getPlaceObject(req, res, match[0], 'relation');
-  } else if (match = req.path.match(/^\/search$/)) {
-    return search(req, res);
-  } else if (match = req.path.match(/^\/$/)) {
-    return getRoot(req, res);
-  } else if (match = req.url.match(/^\/osm\/(.+)$/)) {
-    return res.redirect(301, `https://places.pub/${match[1]}`);
-  } else {
-    return res.status(404).send('Not Found');
+    if (match = req.path.match(/^\/node\/(\d+)$/)) {
+      return getPlaceObject(req, res, match[1], 'node');
+    } else if (match = req.path.match(/^\/way\/(\d+)$/)) {
+      return getPlaceObject(req, res, match[1], 'way');
+    } else if (match = req.path.match(/^\/relation\/(\d+)$/)) {
+      return getPlaceObject(req, res, match[1], 'relation');
+    } else if (match = req.path.match(/^\/search$/)) {
+      return search(req, res);
+    } else if (match = req.path.match(/^\/$/)) {
+      return getRoot(req, res);
+    } else if (match = req.url.match(/^\/osm\/(.+)$/)) {
+      return res.redirect(301, `https://places.pub/${match[1]}`);
+    } else {
+      throw new ProblemDocument({
+        status: 404,
+        title: 'Not Found',
+        detail: 'No route for this URL',
+        instance: req.originalUrl
+      })
+    }
+  } catch (err) {
+    if (err instanceof ProblemDocument) {
+      res
+        .status(err.status)
+        .setheader('Content-Type', 'application/problem+json')
+        .json(err)
+    } else {
+      console.error(err);
+      res
+        .status(500)
+        .setHeader('Content-Type', 'application/problem+json')
+        .json(new ProblemDocument({
+          status: 500,
+          title: 'Internal Server Error',
+          detail: 'An unexpected error occurred.',
+          instance: req.originalUrl
+        }));
+    }
   }
 }
 
@@ -133,7 +156,11 @@ async function getRoot(req, res) {
       ReadMeHtml = marked.parse(readmeContent);
     } catch (error) {
       console.error('Error reading README.md:', error);
-      return res.status(500).send('Internal Server Error');
+      throw new ProblemDocument({
+        status: 500,
+        instance: req.originalUrl,
+        detail: "Error reading README.md"
+      })
     }
   }
   const fullPage = `
@@ -225,8 +252,21 @@ async function search(req, res) {
 
   const { q, bbox } = req.query;
 
-  if (!q && !bbox) return res.status(400).send('Bad Request');
-  if (q && q.length < 3) return res.status(400).send('Bad Request');
+  if (!q && !bbox) {
+    throw new ProblemDocument({
+      status: 400,
+      detail: 'At least one of q or bbox argument required',
+      instance: req.originalUrl
+    })
+  }
+
+  if (q && q.length < 3) {
+    throw new ProblemDocument({
+      status: 400,
+      detail: 'q parameter must be 3 characters or longer',
+      instance: req.originalUrl
+    })
+  }
 
   let parts = [];
 
@@ -235,24 +275,40 @@ async function search(req, res) {
     parts = bbox.split(',');
 
     if (parts.length !== 4) {
-      return res.status(400).send('Bad Request');
+      throw new ProblemDocument({
+        status: 400,
+        detail: 'bbox parameter must be 4 comma-separated numbers',
+        instance: req.originalUrl
+      })
     }
 
     if (parts.some((p) => !/^-?\d+(\.\d+)?$/.test(p))) {
-      return res.status(400).send('Bad Request');
+      throw new ProblemDocument({
+        status: 400,
+        detail: 'bbox parameter must be 4 comma-separated numbers',
+        instance: req.originalUrl
+      })
     }
 
     parts = parts.map((p) => parseFloat(p));
 
     if (parts.some((p) => isNaN(p))) {
-      return res.status(400).send('Bad Request');
+      throw new ProblemDocument({
+        status: 400,
+        detail: 'bbox parameter must be 4 comma-separated numbers',
+        instance: req.originalUrl
+      })
     }
 
     if (parts[0] > 180 || parts[0] < -180 ||
       parts[1] > 90 || parts[1] < -90 ||
       parts[2] > 180 || parts[2] < -180 ||
       parts[3] > 90 || parts[3] < -90) {
-      return res.status(400).send('Bad Request');
+      throw new ProblemDocument({
+        status: 400,
+        detail: 'longitude can be -180 to 180; latitude can be -90 to 90',
+        instance: req.originalUrl
+      })
     }
   }
 
@@ -287,13 +343,25 @@ async function search(req, res) {
 
 async function getPlaceObject(req, res, placeId, type) {
   if (!placeId) {
-    return res.status(400).send('Bad Request');
+    throw new ProblemDocument({
+      status: 400,
+      detail: 'Missing place ID parameter in URL',
+      instance: req.originalUrl
+    })
   }
   if (!/^\d+$/.test(placeId)) {
-    return res.status(400).send('Bad Request');
+    throw new ProblemDocument({
+      status: 400,
+      detail: `Place ID parameter must be an integer; got ${placeId}`,
+      instance: req.originalUrl
+    })
   }
   if (type !== 'node' && type !== 'way' && type !== 'relation') {
-    return res.status(400).send('Bad Request');
+     throw new ProblemDocument({
+      status: 400,
+      detail: `Place type parameter must be one of "node", "way" or "relation", got ${type}`,
+      instance: req.originalUrl
+    })
   }
 
   const query = ```
@@ -305,7 +373,10 @@ async function getPlaceObject(req, res, placeId, type) {
   const results = await runOverpass(query)
 
   if (!results.elements || results.elements.length === 0) {
-    return res.status(404).send('Not Found');
+    throw new ProblemDocument({
+      status: 404,
+      detail: `No object with type ${type} and id ${placeId} found`
+    })
   }
 
   const el = results.elements[0]
