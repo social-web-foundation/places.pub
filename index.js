@@ -95,6 +95,10 @@ function osmTagsToVCardAddress(tags) {
   return Object.keys(address).length > 1 ? { 'vcard:hasAddress': address } : undefined;
 }
 
+function isProblemDocument(err) {
+  return err && err.constructor && err.constructor.name === 'ProblemDocument';
+}
+
 exports.getPlace = async (req, res) => {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -128,7 +132,7 @@ exports.getPlace = async (req, res) => {
       })
     }
   } catch (err) {
-    if (err instanceof ProblemDocument) {
+    if (isProblemDocument(err)) {
       res
         .status(err.status)
         .setheader('Content-Type', 'application/problem+json')
@@ -375,7 +379,8 @@ async function getPlaceObject(req, res, placeId, type) {
   if (!results.elements || results.elements.length === 0) {
     throw new ProblemDocument({
       status: 404,
-      detail: `No object with type ${type} and id ${placeId} found`
+      detail: `No object with type ${type} and id ${placeId} found`,
+      instance: req.originalUrl
     })
   }
 
