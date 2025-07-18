@@ -364,11 +364,11 @@ async function getPlaceObject(req, res, placeId, type) {
     })
   }
 
-  const query = ```
+  const query = `
     [out:json];
     ${type}(${placeId});
     out geom;
-  ```
+  `;
 
   const results = await runOverpass(query)
 
