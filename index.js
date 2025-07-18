@@ -59,14 +59,6 @@ function roundCoord(coord) {
   return Math.round(coord * 1e5) / 1e5;
 }
 
-function tagArrayToObject(all_tags) {
-  const tags = {};
-  for (const { key, value } of all_tags) {
-    tags[key] = value;
-  }
-  return tags;
-}
-
 function extractNameMap(tags) {
   const nameMap = {};
   for (const [key, value] of Object.entries(tags)) {
@@ -117,11 +109,11 @@ exports.getPlace = async (req, res) => {
   let match = null;
 
   if (match = req.path.match(/^\/node\/(\d+)$/)) {
-    return getPlaceObject(req, res, match.slice(1), 'node');
+    return getPlaceObject(req, res, match[0], 'node');
   } else if (match = req.path.match(/^\/way\/(\d+)$/)) {
-    return getPlaceObject(req, res, match.slice(1), 'way');
+    return getPlaceObject(req, res, match[0], 'way');
   } else if (match = req.path.match(/^\/relation\/(\d+)$/)) {
-    return getPlaceObject(req, res, match.slice(1), 'relation');
+    return getPlaceObject(req, res, match[0], 'relation');
   } else if (match = req.path.match(/^\/search$/)) {
     return search(req, res);
   } else if (match = req.path.match(/^\/$/)) {
@@ -293,62 +285,51 @@ async function search(req, res) {
   res.status(200).json(results);
 }
 
-async function getPlaceObject(req, res, match, type) {
-  const [placeId] = match;
-  if (!placeId) return res.status(400).send('Bad Request');
-  if (!/^\d+$/.test(placeId)) return res.status(400).send('Bad Request');
-  if (type !== 'node' && type !== 'way' && type !== 'relation') return res.status(400).send('Bad Request');
-
-  const latlon = type === 'node' ? 'latitude AS lat, longitude AS lon' : 'ST_Y(ST_CENTROID(geometry)) AS lat, ST_X(ST_CENTROID(geometry)) AS lon';
-
-  const query = `
-    SELECT
-      id,
-      all_tags,
-      osm_timestamp,
-      ${latlon},
-      ST_AsGeoJSON(geometry) AS geojson
-    FROM \`bigquery-public-data.geo_openstreetmap.planet_${type}s\`
-    WHERE id = @id
-    LIMIT 1
-  `;
-
-  let rows;
-  try {
-    [rows] = await bq.query({
-      query,
-      params: { id: Number(placeId) }
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).send('Internal Server Error');
+async function getPlaceObject(req, res, placeId, type) {
+  if (!placeId) {
+    return res.status(400).send('Bad Request');
+  }
+  if (!/^\d+$/.test(placeId)) {
+    return res.status(400).send('Bad Request');
+  }
+  if (type !== 'node' && type !== 'way' && type !== 'relation') {
+    return res.status(400).send('Bad Request');
   }
 
-  if (!rows.length) return res.status(404).send('Not Found');
+  const query = ```
+    [out:json];
+    ${type}(${placeId});
+    out geom;
+  ```
 
-  const row = rows[0];
-  const tags = tagArrayToObject(row.all_tags);
-  const geometry = JSON.parse(row.geojson);
+  const results = await runOverpass(query)
+
+  if (!results.elements || results.elements.length === 0) {
+    return res.status(404).send('Not Found');
+  }
+
+  const el = results.elements[0]
+
+  const tags = el.tags;
 
   const context = [
     'https://www.w3.org/ns/activitystreams',
     {
-      dcterms: 'http://purl.org/dc/terms/',
-      geojson: 'https://purl.org/geojson/vocab#'
+      dcterms: 'http://purl.org/dc/terms/'
     }
   ];
 
   const place = {
     '@context': context,
-    type: ["Place", "geojson:Feature"],
+    type: "Place",
     id: `https://places.pub/${type}/${placeId}`,
-    to: ['as:Public'],
+    to: 'as:Public',
     name: tags.name,
     nameMap: extractNameMap(tags),
     summary: tags.description,
     image: tags.image,
-    latitude: roundCoord(parseFloat(row.lat)),
-    longitude: roundCoord(parseFloat(row.lon)),
+    latitude: roundCoord(parseFloat(el.lat)),
+    longitude: roundCoord(parseFloat(el.lon)),
     altitude: (tags.ele) ? Math.round(parseFloat(tags.ele)) : undefined,
     units: (tags.ele) ? 'm' : undefined,
     'dcterms:license': {
@@ -361,7 +342,6 @@ async function getPlaceObject(req, res, match, type) {
       href: `https://www.openstreetmap.org/${type}/${placeId}`,
       name: `OpenStreetMap ${type} ${placeId}`
     },
-    'geojson:hasGeometry': geometry,
     ...osmTagsToVCardAddress(tags)
   };
 
