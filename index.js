@@ -135,7 +135,7 @@ exports.getPlace = async (req, res) => {
     if (isProblemDocument(err)) {
       res
         .status(err.status)
-        .setheader('Content-Type', 'application/problem+json')
+        .setHeader('Content-Type', 'application/problem+json')
         .json(err)
     } else {
       console.error(err);
