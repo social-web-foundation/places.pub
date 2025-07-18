@@ -241,7 +241,7 @@ async function nameBbboxSearch(q, parts) {
 
     is_in(${s},${w});
     rel(pivot);
-    relation._["name"] -> .containers;
+    relation._["name"~"${esc}",i] -> .containers;
     (.inside; .containers;);
     out tags;`;
   const json = await runOverpass(query);
