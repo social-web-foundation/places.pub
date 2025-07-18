@@ -381,7 +381,7 @@ async function getPlaceObject(req, res, placeId, type) {
 
   const el = results.elements[0]
 
-  const tags = el.tags;
+  const tags = el.tags || {};
 
   const context = [
     'https://www.w3.org/ns/activitystreams',
