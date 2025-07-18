@@ -112,17 +112,17 @@ exports.getPlace = async (req, res) => {
     let match = null;
 
     if (match = req.path.match(/^\/node\/(\d+)$/)) {
-      return getPlaceObject(req, res, match[1], 'node');
+      await getPlaceObject(req, res, match[1], 'node');
     } else if (match = req.path.match(/^\/way\/(\d+)$/)) {
-      return getPlaceObject(req, res, match[1], 'way');
+      await getPlaceObject(req, res, match[1], 'way');
     } else if (match = req.path.match(/^\/relation\/(\d+)$/)) {
-      return getPlaceObject(req, res, match[1], 'relation');
+      await getPlaceObject(req, res, match[1], 'relation');
     } else if (match = req.path.match(/^\/search$/)) {
-      return search(req, res);
+      await search(req, res);
     } else if (match = req.path.match(/^\/$/)) {
-      return getRoot(req, res);
+      await getRoot(req, res);
     } else if (match = req.url.match(/^\/osm\/(.+)$/)) {
-      return res.redirect(301, `https://places.pub/${match[1]}`);
+      res.redirect(301, `https://places.pub/${match[1]}`);
     } else {
       throw new ProblemDocument({
         status: 404,
