@@ -18,6 +18,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const marked = require('marked');
+const sanitizeHtml = require('sanitize-html');
 const { ProblemDocument } = require('http-problem-details');
 
 const MAX_SEARCH_RESULTS = 100;
@@ -157,7 +158,13 @@ async function getRoot(req, res) {
     try {
       const readmePath = path.join(__dirname, 'README.md');
       const readmeContent = await fs.readFile(readmePath, 'utf8');
-      ReadMeHtml = marked.parse(readmeContent);
+      ReadMeHtml = sanitizeHtml(marked.parse(readmeContent), {
+        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2']),
+        allowedAttributes: {
+          ...sanitizeHtml.defaults.allowedAttributes,
+          img: ['src', 'alt', 'title']
+        }
+      });
     } catch (error) {
       console.error('Error reading README.md:', error);
       throw new ProblemDocument({
