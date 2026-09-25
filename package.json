@@ -6,7 +6,7 @@
     "@google-cloud/bigquery": "^9.1.0",
     "@google-cloud/functions-framework": "^5.0.5",
     "http-problem-details": "^0.1.7",
-    "marked": "^18.0.12"
+    "marked": "^18.0.13"
   },
   "engines": {
     "node": "20"
