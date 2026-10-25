@@ -9,6 +9,6 @@
     "marked": "^18.1.1"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   }
 }
