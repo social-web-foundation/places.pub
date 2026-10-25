@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-25
+
 ### Added
 
 - Added a CHANGELOG.md
@@ -80,7 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Return problem documents for HTTP errors.
 
-[Unreleased]: https://github.com/social-web-foundation/places.pub/compare/v2.0.7...HEAD
+[Unreleased]: https://github.com/social-web-foundation/places.pub/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/social-web-foundation/places.pub/compare/v2.0.7...v2.1.0
 [2.0.7]: https://github.com/social-web-foundation/places.pub/compare/v2.0.6...v2.0.7
 [2.0.6]: https://github.com/social-web-foundation/places.pub/compare/v2.0.5...v2.0.6
 [2.0.5]: https://github.com/social-web-foundation/places.pub/compare/v2.0.4...v2.0.5
