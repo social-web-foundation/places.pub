@@ -1,3 +1,6 @@
+[build]
+builder = "gcr.io/buildpacks/builder:google-24"
+
 [[build.env]]
     name = "GOOGLE_FUNCTION_TARGET"
     value =  "getPlace"
