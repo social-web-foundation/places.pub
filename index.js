@@ -15,25 +15,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-const fs = require('fs').promises;
-const path = require('path');
-const marked = require('marked');
-const { ProblemDocument } = require('http-problem-details');
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { marked } from 'marked';
+import { ProblemDocument } from 'http-problem-details';
+import { parseTemplate } from 'url-template'
 
 const MAX_SEARCH_RESULTS = 100;
 
 let ReadMeHtml = null;
 
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+const OVERPASS_URL_TEMPLATE = 'https://api.overpass.ch/v1/{key}/interpreter';
+const OVERPASS_API_KEY = process.env.OVERPASS_API_KEY
+const OVERPASS_URL = parseTemplate(OVERPASS_URL_TEMPLATE)
+  .expand({ key: OVERPASS_API_KEY })
 
 let version = null
 
 async function getVersion() {
   if (!version) {
-    const packagePath = path.join(__dirname, 'package.json');
+    const packagePath = path.join(import.meta.dirname, 'package.json');
     const packageContent = await fs.readFile(packagePath, 'utf8');
-    const package = JSON.parse(packageContent)
-    version = package.version
+    const pkg = JSON.parse(packageContent)
+    version = pkg.version
   }
   return version
 }
@@ -99,7 +103,7 @@ function isProblemDocument(err) {
   return err && err.constructor && err.constructor.name === 'ProblemDocument';
 }
 
-exports.getPlace = async (req, res) => {
+export const getPlace = async (req, res) => {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS');
@@ -155,7 +159,7 @@ exports.getPlace = async (req, res) => {
 async function getRoot(req, res) {
   if (ReadMeHtml === null) {
     try {
-      const readmePath = path.join(__dirname, 'README.md');
+      const readmePath = path.join(import.meta.dirname, 'README.md');
       const readmeContent = await fs.readFile(readmePath, 'utf8');
       ReadMeHtml = marked.parse(readmeContent);
     } catch (error) {

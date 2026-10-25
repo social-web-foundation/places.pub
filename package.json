@@ -2,6 +2,7 @@
   "name": "places-pub",
   "version": "2.0.7",
   "main": "index.js",
+  "type": "module",
   "dependencies": {
     "@google-cloud/bigquery": "^9.3.0",
     "@google-cloud/functions-framework": "^5.0.5",
